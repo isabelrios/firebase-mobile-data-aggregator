@@ -7,7 +7,7 @@
 import argparse
 import sys
 
-from firebase import FirebaseHelper
+from firebase import ExecutionOutcome, FirebaseHelper
 
 PROJECTS_ABBREV = [
     'moz-fenix',
@@ -26,7 +26,7 @@ FILTER_NAME_ABBREV = [
 
 def parse_args(cmdln_args):
     parser = argparse.ArgumentParser(
-        description="Query Firebase API for mobile test data"
+        description="Query Firebase Cloud ToolResults API for mobile test data"
     )
 
     parser.add_argument(
@@ -50,7 +50,10 @@ def main():
     args = parse_args(sys.argv[1:])
 
     FirebaseHelperClient = FirebaseHelper(args.project, args.filter_by_name)
-    FirebaseHelperClient.print_outcome_summaries()
+    #FirebaseHelperClient.get_test_case_details(ExecutionOutcome.FAILURE.value)
+    FirebaseHelperClient.print_test_results_by_execution_summary(
+        execution_outcome_summary=ExecutionOutcome.SUCCESS.value
+    )
 
 
 if __name__ == '__main__':

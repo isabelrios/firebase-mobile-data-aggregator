@@ -14,7 +14,7 @@ from google.oauth2 import service_account
 
 class FirebaseProjects(Enum):
     """
-    Enum for the Firebase project.
+    Enum for the Firebase projects.
     """
     MOZ_FENIX = "moz-fenix"
     MOZ_FOCUS_ANDROID = "moz-focus-android"

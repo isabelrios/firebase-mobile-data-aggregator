@@ -9,14 +9,14 @@ import sys
 
 from firebase import ExecutionOutcome, FirebaseHelper
 
-PROJECTS_ABBREV = [
+PROJECTS = [
     'moz-fenix',
     'moz-focus-android',
     'moz-reference-browser',
     'moz-android-components'
 ]
 
-FILTER_NAME_ABBREV = [
+FILTER_NAME_PACKAGE = [
     'org.mozilla.fenix.debug',
     'org.mozilla.fenix',
     'org.mozilla.focus.debug',
@@ -33,14 +33,14 @@ def parse_args(cmdln_args):
         "--project",
         help="Indicate project",
         required=True,
-        choices=PROJECTS_ABBREV
+        choices=PROJECTS
     )
 
     parser.add_argument(
         "--filter-by-name",
         help="Indicate filter by name",
         required=True,
-        choices=FILTER_NAME_ABBREV
+        choices=FILTER_NAME_PACKAGE
     )
 
     return parser.parse_args(args=cmdln_args)
@@ -50,14 +50,14 @@ def main():
     args = parse_args(sys.argv[1:])
 
     FirebaseHelperClient = FirebaseHelper(args.project, args.filter_by_name)
-    #FirebaseHelperClient.get_test_case_details(ExecutionOutcome.SUCCESS.value)
+    FirebaseHelperClient.get_test_case_details(ExecutionOutcome.SUCCESS.value)
     FirebaseHelperClient.print_test_results_by_execution_summary(
-        execution_outcome_summary=ExecutionOutcome.SUCCESS.value
+         execution_outcome_summary=ExecutionOutcome.SUCCESS.value
     )
-    # FirebaseHelperClient.print_test_results_by_execution_summary(
-    #     execution_outcome_summary=ExecutionOutcome.SUCCESS.value
-    # )
-    #FirebaseHelperClient.display_execution_timestamp(ExecutionOutcome.SUCCESS.value)
+    FirebaseHelperClient.print_test_results_by_execution_summary(
+        execution_outcome_summary=ExecutionOutcome.FAILURE.value
+    )
+    FirebaseHelperClient.display_execution_timestamp(ExecutionOutcome.SUCCESS.value)
 
 
 

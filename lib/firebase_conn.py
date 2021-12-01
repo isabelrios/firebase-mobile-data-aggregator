@@ -34,18 +34,18 @@ class FirebaseConn:
         try: 
             if project == FirebaseProjects.MOZ_FENIX.value:
                 gcloud_auth_moz_fenix = os.environ['GCLOUD_AUTH_MOZ_FENIX']
-                self.json_acct_info = json.loads(gcloud_auth_moz_fenix)
+                self.JSON_CREDENTIAL = json.loads(gcloud_auth_moz_fenix)
             elif project == FirebaseProjects.MOZ_FOCUS_ANDROID.value:
                 gcloud_auth_moz_focus_android = os.environ['GCLOUD_AUTH_MOZ_FOCUS_ANDROID']
-                self.json_acct_info = json.loads(gcloud_auth_moz_focus_android)
+                self.JSON_CREDENTIAL = json.loads(gcloud_auth_moz_focus_android)
             elif project == FirebaseProjects.MOZ_ANDROID_COMPONENTS.value:
                 gcloud_auth_moz_android_components = os.environ['GCLOUD_AUTH_MOZ_ANDROID_COMPONENTS']
-                self.json_acct_info = json.loads(gcloud_auth_moz_android_components)
+                self.JSON_CREDENTIAL = json.loads(gcloud_auth_moz_android_components)
         except KeyError:
             raise Exception("Please set the GCLOUD auth environment variable.")
         
         """Authenticate with Google API"""
         self.credentials = service_account.Credentials.from_service_account_info(
-            self.json_acct_info)
+            self.JSON_CREDENTIAL)
 
         self.set_project(self.credentials)

@@ -50,7 +50,6 @@ def main():
     args = parse_args(sys.argv[1:])
 
     FirebaseHelperClient = FirebaseHelper(args.project, args.filter_by_name)
-    FirebaseHelperClient.get_test_case_details(ExecutionOutcome.SUCCESS.value)
     FirebaseHelperClient.print_test_results_by_execution_summary(
          execution_outcome_summary=ExecutionOutcome.SUCCESS.value
     )

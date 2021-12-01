@@ -19,13 +19,23 @@ class ExecutionOutcome(Enum):
     SUCCESS = 'success'
     INCONCLUSIVE = 'inconclusive'
     SKIPPED = 'skipped'
+    FLAKY = 'flaky'
+
+
+class TestStatus(Enum):
+    PASSED = 'passed'
+    FAILED = 'failed'
+    ERROR = 'error'
+    SKIPPED = 'skipped'
+    FLAKY = 'flaky'
+
 
 EXECUTIONS_PAGE_SIZE = 60
 STEPS_PAGE_SIZE = 200
 CASES_PAGE_SIZE = 200
 
-class Firebase:
 
+class Firebase:
     def __init__(self, project_id: str, filter_by_name: str) -> None:
         try:
             self.connection = FirebaseConn(project_id)
@@ -165,42 +175,6 @@ class FirebaseHelper:
         """Get a single environment"""
         return self.firebase.get_environment(history_id, execution_id, environment_id)
 
-    def get_test_case_details(self, execution_outcome_summary: str) -> dict:
-        """Get test case details with provided execution outcome summary"""
-        history = next(iter([x for y in self.get_histories().values() for x in y]))
-        executions = self.get_executions(
-            history_id=history['historyId'],
-            page_token=None
-        )
-        results = []
-
-        for execution in executions['executions']:
-            """Filter on complete executions"""
-            if 'complete' in execution.values():
-                if execution['outcome']['summary'] == execution_outcome_summary:
-                    steps = self.get_steps(
-                        history_id=history['historyId'],
-                        execution_id=int(execution['executionId']),
-                        page_size=int(STEPS_PAGE_SIZE)
-                    )
-                    for k, v in steps.items():
-                        if k == 'steps':
-                            for step in v:
-                                if step['outcome']['summary'] == 'failure':
-                                    cases = self.get_test_cases(
-                                        history_id=history['historyId'],
-                                        execution_id=int(execution['executionId']),
-                                        step_id=step['stepId'],
-                                        page_size=int(CASES_PAGE_SIZE)
-                                    )
-                                    # TODO: Decide on which data to capture
-                                    results.append({
-                                        'testCase': [case['testCaseReference'] for case in cases['testCases']],
-                                        'result': [case['status'] for case in cases['testCases']],
-                                        'matrix': execution['testExecutionMatrixId']
-                                    })
-        print(f"{results}")
-
     def get_test_case_results_by_execution_summary(self, execution_outcome_summary: str) -> dict:
         from datetime import datetime
 
@@ -213,8 +187,8 @@ class FirebaseHelper:
         results = []
 
         for execution in executions['executions']:
-            """Filter on complete executions"""
-            if 'complete' in execution.values():
+            """Filter on complete immutable executions"""
+            if (('state', 'complete') in execution.items()):
                 """Executions with flaky tests (of multiple attempts) are treated as successful"""
                 if execution['outcome']['summary'] == execution_outcome_summary:
                     steps = self.get_steps(
@@ -226,32 +200,38 @@ class FirebaseHelper:
                         history_id=history['historyId'],
                         execution_id=int(execution['executionId'])
                     )
-                    for k, v in steps.items():
-                        if k == 'steps':
-                            for step in v:
-                                if step['outcome']['summary'] == 'failure':
-                                    cases = self.get_test_cases(
-                                        history_id=history['historyId'],
-                                        execution_id=int(execution['executionId']),
-                                        step_id=step['stepId'],
-                                        page_size=int(CASES_PAGE_SIZE)
-                                    )
-                                    for k, v in cases.items():
-                                        if k == 'testCases':
-                                            for case in v:
-                                                if case['status'] == 'failed':
-                                                    results.append({
-                                                            'testCase': [case['testCaseReference'] for case in cases['testCases']],
-                                                            'testCaseResult': [case['status'] for case in cases['testCases']],
-                                                            'matrix': execution['testExecutionMatrixId'],
-                                                            'environmentSummary': [environment['environmentResult']['outcome']['summary'] for environment in environments['environments']],
-                                                            'creationTime': str(
-                                                                datetime.fromtimestamp(
-                                                                    int(execution['creationTime']['seconds'])
-                                                                ).strftime('%Y-%m-%d')
-                                                            ),
-                                                        }
+                    for k, v in environments.items():
+                        if k == 'environments':
+                            for env in v:
+                                if env['environmentResult']['outcome']['summary'] in {ExecutionOutcome.FLAKY.value, ExecutionOutcome.FAILURE.value}:
+                                    for k, v in steps.items():
+                                        if k == 'steps':
+                                            for step in v:
+                                                if step['outcome']['summary'] == ExecutionOutcome.FAILURE.value:
+                                                    cases = self.get_test_cases(
+                                                        history_id=history['historyId'],
+                                                        execution_id=int(execution['executionId']),
+                                                        step_id=step['stepId'],
+                                                        page_size=int(CASES_PAGE_SIZE)
                                                     )
+                                                    for k, v in cases.items():
+                                                        if k == 'testCases':
+                                                            for case in v:
+                                                                if case['status'] == TestStatus.FAILED.value:
+                                                                    results.append({
+                                                                            'testCase': [case['testCaseReference'] for case in cases['testCases']],
+                                                                            'testCaseResult': [case['status'] for case in cases['testCases']],
+                                                                            'matrix': execution['testExecutionMatrixId'],
+                                                                            'environmentSummary': [environment['environmentResult']['outcome']['summary'] for environment in environments['environments']],
+                                                                            'duration': [step['testExecutionStep']['testTiming']['testProcessDuration']['seconds']],
+                                                                            'creationTime': str(
+                                                                                datetime.fromtimestamp(
+                                                                                    int(execution['creationTime']['seconds'])
+                                                                                ).strftime('%Y-%m-%d')
+                                                                            )
+                                                                            #'testIssues': [[testIssues['type'] for testIssues in step['testExecutionStep']['testIssues']] if 'testIssues' in step['testExecutionStep'] else None]
+                                                                        }
+                                                                    )
         return results
 
     def print_test_results_by_execution_summary(self, execution_outcome_summary: str) -> None:
@@ -260,7 +240,7 @@ class FirebaseHelper:
             for result in results:
                 print(f"{result}")
         else:
-            print("No results found")
+            print(f"No results found for {execution_outcome_summary}")
 
     def display_execution_timestamp(self, execution_outcome_summary: str) -> None:
         from datetime import datetime
@@ -271,8 +251,8 @@ class FirebaseHelper:
             page_token=None
         )
         for execution in executions['executions']:
-            """Filter on complete executions"""
-            if 'complete' in execution.values():
+            """Filter on complete immutable executions"""
+            if (('state', 'complete') in execution.items()):
                 if execution['outcome']['summary'] == execution_outcome_summary:
                     for k, v in execution['creationTime'].items():
                         if k == 'seconds':

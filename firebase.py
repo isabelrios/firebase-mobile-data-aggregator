@@ -30,9 +30,10 @@ class TestStatus(Enum):
     FLAKY = 'flaky'
 
 
-EXECUTIONS_PAGE_SIZE = 60
-STEPS_PAGE_SIZE = 200
-CASES_PAGE_SIZE = 200
+class Paging(Enum):
+    EXECUTIONS_PAGE_SIZE = 120
+    STEPS_PAGE_SIZE = 200
+    CASES_PAGE_SIZE = 200
 
 
 class Firebase:
@@ -59,7 +60,7 @@ class Firebase:
         executions = self.projects_client.projects().histories().executions().list(
             projectId=self.projectId,
             historyId=history_id,
-            pageSize=int(EXECUTIONS_PAGE_SIZE),
+            pageSize=int(Paging.EXECUTIONS_PAGE_SIZE.value),
             pageToken=page_token
         ).execute()
         return executions
@@ -175,8 +176,15 @@ class FirebaseHelper:
         """Get a single environment"""
         return self.firebase.get_environment(history_id, execution_id, environment_id)
 
+    def check_for_execution_state(self, execution: dict, state: str) -> bool:
+        """Check if an execution is in a complete immutable state"""
+        if (('state', state) in execution.items()):
+            return True
+        else:
+            return False
+    
     def get_test_case_results_by_execution_summary(self, execution_outcome_summary: str) -> dict:
-        from datetime import datetime
+        from datetime import datetime, timedelta
 
         """Get test case results from executions with a provided outcome summary"""
         history = next(iter([x for y in self.get_histories().values() for x in y]))
@@ -188,13 +196,13 @@ class FirebaseHelper:
 
         for execution in executions['executions']:
             """Filter on complete immutable executions"""
-            if (('state', 'complete') in execution.items()):
+            if self.check_for_execution_state(execution, 'complete'):
                 """Executions with flaky tests (of multiple attempts) are treated as successful"""
                 if execution['outcome']['summary'] == execution_outcome_summary:
                     steps = self.get_steps(
                         history_id=history['historyId'],
                         execution_id=int(execution['executionId']),
-                        page_size=int(STEPS_PAGE_SIZE)
+                        page_size=int(Paging.STEPS_PAGE_SIZE.value)
                     )
                     environments = self.get_environments(
                         history_id=history['historyId'],
@@ -212,7 +220,7 @@ class FirebaseHelper:
                                                         history_id=history['historyId'],
                                                         execution_id=int(execution['executionId']),
                                                         step_id=step['stepId'],
-                                                        page_size=int(CASES_PAGE_SIZE)
+                                                        page_size=int(Paging.CASES_PAGE_SIZE.value)
                                                     )
                                                     for k, v in cases.items():
                                                         if k == 'testCases':
@@ -228,7 +236,8 @@ class FirebaseHelper:
                                                                                 datetime.fromtimestamp(
                                                                                     int(execution['creationTime']['seconds'])
                                                                                 ).strftime('%Y-%m-%d')
-                                                                            )
+                                                                            ),
+                                                                            'withinPastDay': ((datetime.utcnow() - datetime.fromtimestamp(int(execution['creationTime']['seconds']))) > timedelta(days=1))
                                                                             #'testIssues': [[testIssues['type'] for testIssues in step['testExecutionStep']['testIssues']] if 'testIssues' in step['testExecutionStep'] else None]
                                                                         }
                                                                     )
@@ -242,14 +251,15 @@ class FirebaseHelper:
         else:
             print(f"No results found for {execution_outcome_summary}")
 
-    def display_execution_timestamp(self, execution_outcome_summary: str) -> None:
-        from datetime import datetime
+    def get_executions_from_past_day_by_execution_summary(self, execution_outcome_summary: str) -> None:
+        from datetime import datetime, timedelta
 
         history = next(iter([x for y in self.get_histories().values() for x in y]))
         executions = self.get_executions(
             history_id=history['historyId'],
             page_token=None
         )
+        candidates = []
         for execution in executions['executions']:
             """Filter on complete immutable executions"""
             if (('state', 'complete') in execution.items()):
@@ -259,4 +269,8 @@ class FirebaseHelper:
                             dt_obj = datetime.fromtimestamp(
                                 int(v)
                             )
-                            print(f"{dt_obj.strftime('%Y-%m-%d')} - {execution['testExecutionMatrixId']}")
+                            time_diff = ((datetime.utcnow() - dt_obj) > timedelta(days=1))
+                            if not time_diff:
+                                candidates.append(execution)   
+                            #print(f"{dt_obj.strftime('%Y-%m-%d')} - {execution['testExecutionMatrixId']} - {'more than 24 hours have passed' if time_diff else None}")
+        return candidates

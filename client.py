@@ -51,13 +51,13 @@ def main():
 
     FirebaseHelperClient = FirebaseHelper(args.project, args.filter_by_name)
     FirebaseHelperClient.print_test_results_by_execution_summary(
-         execution_outcome_summary=ExecutionOutcome.SUCCESS.value
+        execution_outcome_summary=ExecutionOutcome.SUCCESS.value
     )
     FirebaseHelperClient.print_test_results_by_execution_summary(
         execution_outcome_summary=ExecutionOutcome.FAILURE.value
     )
-    FirebaseHelperClient.display_execution_timestamp(ExecutionOutcome.SUCCESS.value)
-
+    FirebaseHelperClient.get_executions_from_past_day_by_execution_summary(
+        ExecutionOutcome.SUCCESS.value)
 
 
 if __name__ == '__main__':

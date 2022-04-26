@@ -8,6 +8,7 @@
 
 from __future__ import absolute_import
 
+import json
 import sys
 from enum import Enum
 
@@ -31,9 +32,9 @@ class TestStatus(Enum):
 
 
 class Paging(Enum):
-    EXECUTIONS_PAGE_SIZE = 120
-    STEPS_PAGE_SIZE = 200
-    CASES_PAGE_SIZE = 200
+    EXECUTIONS_PAGE_SIZE = 100
+    STEPS_PAGE_SIZE = 250
+    CASES_PAGE_SIZE = 250
 
 
 class Firebase:
@@ -74,14 +75,15 @@ class Firebase:
         ).execute()
         return execution
 
-    def get_steps(self, history_id: str, execution_id: int, page_size: int) -> dict:
-        """Get a list of all steps (default: 25) for a given execution
+    def get_steps(self, history_id: str, execution_id: int, page_size: int, page_token: str = None) -> dict:
+        """Get a list of all steps (default: 25, max: 200 without page token) for a given execution
         sorted by creation time in descending order"""
         steps = self.projects_client.projects().histories().executions().steps().list(
             projectId=self.projectId,
             historyId=history_id,
             executionId=execution_id,
-            pageSize=page_size
+            pageSize=page_size,
+            pageToken=page_token
         ).execute()
         return steps
 
@@ -152,9 +154,9 @@ class FirebaseHelper:
         """Get a single execution"""
         return self.firebase.get_execution(history_id, execution_id)
 
-    def get_steps(self, history_id: str, execution_id: int, page_size: int) -> dict:
+    def get_steps(self, history_id: str, execution_id: int, page_size: int, page_token: str) -> dict:
         """Get a list of all test steps"""
-        return self.firebase.get_steps(history_id, execution_id, page_size)
+        return self.firebase.get_steps(history_id, execution_id, page_size, page_token)
 
     def get_step(self, history_id: str, execution_id: int, step_id: str) -> dict:
         """Get a single step"""
@@ -202,7 +204,8 @@ class FirebaseHelper:
                     steps = self.get_steps(
                         history_id=history['historyId'],
                         execution_id=int(execution['executionId']),
-                        page_size=int(Paging.STEPS_PAGE_SIZE.value)
+                        page_size=int(Paging.STEPS_PAGE_SIZE.value),
+                        page_token=None
                     )
                     environments = self.get_environments(
                         history_id=history['historyId'],
@@ -225,23 +228,80 @@ class FirebaseHelper:
                                                     for k, v in cases.items():
                                                         if k == 'testCases':
                                                             for case in v:
-                                                                if case['status'] == TestStatus.FAILED.value:
-                                                                    results.append({
-                                                                            'testCase': [case['testCaseReference'] for case in cases['testCases']],
-                                                                            'testCaseResult': [case['status'] for case in cases['testCases']],
-                                                                            'matrix': execution['testExecutionMatrixId'],
-                                                                            'environmentSummary': [environment['environmentResult']['outcome']['summary'] for environment in environments['environments']],
-                                                                            'duration': [step['testExecutionStep']['testTiming']['testProcessDuration']['seconds']],
-                                                                            'creationTime': str(
-                                                                                datetime.fromtimestamp(
-                                                                                    int(execution['creationTime']['seconds'])
-                                                                                ).strftime('%Y-%m-%d')
-                                                                            ),
-                                                                            'withinPastDay': ((datetime.utcnow() - datetime.fromtimestamp(int(execution['creationTime']['seconds']))) > timedelta(days=1))
-                                                                            #'testIssues': [[testIssues['type'] for testIssues in step['testExecutionStep']['testIssues']] if 'testIssues' in step['testExecutionStep'] else None]
-                                                                        }
-                                                                    )
+                                                                if 'status' in case:
+                                                                    if case['status'] == TestStatus.FAILED.value:
+                                                                        results.append({
+                                                                                'testCase': [case['testCaseReference'] for case in cases['testCases']],
+                                                                                'testCaseResult': [case['status'] for case in cases['testCases']],
+                                                                                'matrix': execution['testExecutionMatrixId'],
+                                                                                'environmentSummary': [environment['environmentResult']['outcome']['summary'] for environment in environments['environments']],
+                                                                                'duration': [step['testExecutionStep']['testTiming']['testProcessDuration']['seconds']],
+                                                                                'creationTime': str(
+                                                                                    datetime.fromtimestamp(
+                                                                                        int(execution['creationTime']['seconds'])
+                                                                                    ).strftime('%Y-%m-%d')
+                                                                                ),
+                                                                                'withinPastDay': ((datetime.utcnow() - datetime.fromtimestamp(int(execution['creationTime']['seconds']))) > timedelta(days=1)),
+                                                                                #'testIssues': [[testIssues['type'] for testIssues in step['testExecutionStep']['testIssues']] if 'testIssues' in step['testExecutionStep'] else None]
+                                                                            }
+                                                                        )
+                                                    # WIP Crashes
+                                                    if 'failureDetail' in step['outcome']:
+                                                        if (('crashed', True)) in step['outcome']['failureDetail'].items():
+                                                            print(f"{execution['testExecutionMatrixId']} - {[testIssues['type'] for testIssues in step['testExecutionStep']['testIssues'] if 'type' in testIssues]}")
+                                """Search for inconclusive executions and return a list"""
+                                if env['environmentResult']['outcome']['summary'] in {ExecutionOutcome.INCONCLUSIVE.value}:
+                                    results.append({
+                                        'matrix': execution['testExecutionMatrixId'],
+                                        'matrixResult': execution['outcome']['summary'],
+                                        'creationTime': str(
+                                            datetime.fromtimestamp(
+                                                int(execution['creationTime']['seconds'])
+                                            ).strftime('%Y-%m-%d')
+                                        ),
+                                        'withinPastDay': ((datetime.utcnow() - datetime.fromtimestamp(int(execution['creationTime']['seconds']))) > timedelta(days=1)),
+                                    })
+
         return results
+
+    def get_recent_step_count_by_execution_summary(self, execution_outcome_summary: str) -> dict:
+        from datetime import datetime, timedelta
+        
+        """Get test case results from executions with a provided outcome summary"""
+        history = next(iter([x for y in self.get_histories().values() for x in y]))
+        executions = self.get_executions(
+            history_id=history['historyId'],
+            page_token=None
+        )
+        results = []
+
+        for execution in executions['executions']:
+            """Filter on complete immutable executions"""
+            if self.check_for_execution_state(execution, 'complete'):
+                """Executions with flaky tests (of multiple attempts) are treated as successful"""
+                if execution['outcome']['summary'] == execution_outcome_summary:
+                    steps = self.get_steps(
+                        history_id=history['historyId'],
+                        execution_id=int(execution['executionId']),
+                        page_size=int(Paging.STEPS_PAGE_SIZE.value),
+                        page_token=None
+                    )
+                    results.append(len(steps['steps']))
+
+                    '''Check for next page token and query again'''
+                    if 'nextPageToken' in steps:
+                        if steps['nextPageToken'] is not None:
+                            steps = self.get_steps(
+                                history_id=history['historyId'],
+                                execution_id=int(execution['executionId']),
+                                page_size=int(Paging.STEPS_PAGE_SIZE.value),
+                                page_token=steps['nextPageToken']
+                            )
+                            results.append(len(steps['steps']))
+        return sum(results)
+
+    def post_recent_step_count_by_exectuion_summary(self, execution_outcome_summary: str) -> dict:
+        self.generate_JSON(payload=(self.get_recent_step_count_by_execution_summary(execution_outcome_summary)))
 
     def print_test_results_by_execution_summary(self, execution_outcome_summary: str) -> None:
         results = self.get_test_case_results_by_execution_summary(execution_outcome_summary)
@@ -274,3 +334,17 @@ class FirebaseHelper:
                                 candidates.append(execution)   
                             #print(f"{dt_obj.strftime('%Y-%m-%d')} - {execution['testExecutionMatrixId']} - {'more than 24 hours have passed' if time_diff else None}")
         return candidates
+
+    def generate_JSON(self, payload: str) -> None:
+        payload = {
+            'project': self.firebase.projectId,
+            'application': self.firebase.filterByName,
+            'payload': payload
+        }
+        if payload:
+            try:
+                 with open('payload.json', 'w') as outfile:
+                    json.dump(payload, outfile, indent=4)
+                    print('Output written to [{}]'.format(outfile.name), end='\n\n')
+            except OSError as e:
+                raise SystemExit(e)

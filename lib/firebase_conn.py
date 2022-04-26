@@ -44,7 +44,7 @@ class FirebaseConn:
                 self.JSON_CREDENTIAL = json.loads(
                     gcloud_auth_moz_android_components)
         except KeyError:
-            raise Exception("Please set the GCLOUD auth environment variable.")
+            raise Exception("Please set the GCLOUD_AUTH_MOZ_<project> auth environment variable.")
 
         """Authenticate with Google API"""
         self.credentials = service_account.Credentials.from_service_account_info(

@@ -26,7 +26,7 @@ FILTER_NAME_PACKAGE = [
 
 def parse_args(cmdln_args):
     parser = argparse.ArgumentParser(
-        description="Query Firebase Cloud ToolResults API for mobile test data"
+        description="Query Firebase Cloud ToolResults API for execution data"
     )
 
     parser.add_argument(
@@ -50,14 +50,17 @@ def main():
     args = parse_args(sys.argv[1:])
 
     FirebaseHelperClient = FirebaseHelper(args.project, args.filter_by_name)
-    FirebaseHelperClient.print_test_results_by_execution_summary(
+    # FirebaseHelperClient.print_test_results_by_execution_summary(
+    #     execution_outcome_summary=ExecutionOutcome.FAILURE.value
+    # )
+    # FirebaseHelperClient.print_test_results_by_execution_summary(
+    #     execution_outcome_summary=ExecutionOutcome.INCONCLUSIVE.value
+    # )
+    FirebaseHelperClient.post_recent_step_count_by_exectuion_summary(
         execution_outcome_summary=ExecutionOutcome.SUCCESS.value
     )
-    FirebaseHelperClient.print_test_results_by_execution_summary(
-        execution_outcome_summary=ExecutionOutcome.FAILURE.value
-    )
-    FirebaseHelperClient.get_executions_from_past_day_by_execution_summary(
-        ExecutionOutcome.SUCCESS.value)
+    # FirebaseHelperClient.get_executions_from_past_day_by_execution_summary(
+    #     ExecutionOutcome.SUCCESS.value)
 
 
 if __name__ == '__main__':

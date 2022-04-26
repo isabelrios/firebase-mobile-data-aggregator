@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.10]
-        app: [moz-fenix, moz-focus-android]
+        python-version: ['3.10']
+        app: [moz-fenix]
         filter: [org.mozilla.fenix.debug]
     steps:
       - uses: actions/checkout@v2
@@ -30,7 +30,11 @@ jobs:
           python client.py --project=${{ matrix.app }} --filter-by-name=${{ matrix.filter }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          GCLOUD_AUTH_MOZ_FENIX: ${{ secrets.GCLOUD_AUTH_MOZ_FENIX }}
+          GCLOUD_AUTH_MOZ_FOCUS_ANDROID: ${{ secrets.GCLOUD_AUTH_MOZ_FOCUS_ANDROID }}
       - name: Send slack notification
         run: |
-        python slack.py --input=output.json --project=${{ matrix.configuration }} --filter-by-name=${{ }}
+          python slack.py --type=cases
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          

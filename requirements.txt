@@ -3,7 +3,6 @@ bpyutils==0.4.0
 cachetools==5.0.0
 certifi==2021.10.8
 charset-normalizer==2.0.12
-flake8==4.0.1
 google-api-core==2.7.2
 google-api-python-client==2.44.0
 google-auth==2.6.5
@@ -11,7 +10,6 @@ google-auth-httplib2==0.1.0
 googleapis-common-protos==1.56.0
 httplib2==0.20.4
 idna==3.3
-mccabe==0.7.0
 protobuf==3.20.0
 pyasn1==0.4.8
 pyasn1-modules==0.2.8

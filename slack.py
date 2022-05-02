@@ -100,8 +100,9 @@ def build_payload_content(type: str, dataset: dict) -> list:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "Total UI Tests Ran Count: {count}"
+                        "text": "{app}: *{count}*"
                         .format(
+                            app=dataset['application'],
                             count=str(dataset['payload'])
                         )
                     }

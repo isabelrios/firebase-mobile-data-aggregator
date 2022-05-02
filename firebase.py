@@ -280,24 +280,31 @@ class FirebaseHelper:
             if self.check_for_execution_state(execution, 'complete'):
                 """Executions with flaky tests (of multiple attempts) are treated as successful"""
                 if execution['outcome']['summary'] == execution_outcome_summary:
-                    steps = self.get_steps(
-                        history_id=history['historyId'],
-                        execution_id=int(execution['executionId']),
-                        page_size=int(Paging.STEPS_PAGE_SIZE.value),
-                        page_token=None
-                    )
-                    results.append(len(steps['steps']))
-
-                    '''Check for next page token and query again'''
-                    if 'nextPageToken' in steps:
-                        if steps['nextPageToken'] is not None:
-                            steps = self.get_steps(
-                                history_id=history['historyId'],
-                                execution_id=int(execution['executionId']),
-                                page_size=int(Paging.STEPS_PAGE_SIZE.value),
-                                page_token=steps['nextPageToken']
+                    for k, v in execution['creationTime'].items():
+                        if k == 'seconds':
+                            dt_obj = datetime.fromtimestamp(
+                                int(v)
                             )
-                            results.append(len(steps['steps']))
+                            time_diff = ((datetime.utcnow() - dt_obj) > timedelta(days=1))
+                            if not time_diff:
+                                steps = self.get_steps(
+                                    history_id=history['historyId'],
+                                    execution_id=int(execution['executionId']),
+                                    page_size=int(Paging.STEPS_PAGE_SIZE.value),
+                                    page_token=None
+                                )
+                                results.append(len(steps['steps']))
+
+                                '''Check for next page token and query again'''
+                                if 'nextPageToken' in steps:
+                                    if steps['nextPageToken'] is not None:
+                                        steps = self.get_steps(
+                                            history_id=history['historyId'],
+                                            execution_id=int(execution['executionId']),
+                                            page_size=int(Paging.STEPS_PAGE_SIZE.value),
+                                            page_token=steps['nextPageToken']
+                                        )
+                                        results.append(len(steps['steps']))
         return sum(results)
 
     def post_recent_step_count_by_exectuion_summary(self, execution_outcome_summary: str) -> dict:

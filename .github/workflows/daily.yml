@@ -7,17 +7,26 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  daily:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.10']
         app: [moz-fenix, moz-focus-android]
+        build-type: [debug, nightly]
         include: 
           - app: moz-fenix
+            build-type: debug
             filter: org.mozilla.fenix.debug
+          - app: moz-fenix
+            build-type: nightly
+            filter: org.mozilla.fenix 
           - app: moz-focus-android
+            build-type: debug
             filter: org.mozilla.focus.debug
+          - app: moz-focus-android
+            build-type: nightly
+            filter: org.mozilla.focus.nightly
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}

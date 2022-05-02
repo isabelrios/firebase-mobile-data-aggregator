@@ -20,7 +20,7 @@ FILTER_NAME_PACKAGE = [
     'org.mozilla.fenix.debug',
     'org.mozilla.fenix',
     'org.mozilla.focus.debug',
-    'org.mozilla.focus'
+    'org.mozilla.focus.nightly'
 ]
 
 
@@ -56,7 +56,7 @@ def main():
     # FirebaseHelperClient.print_test_results_by_execution_summary(
     #     execution_outcome_summary=ExecutionOutcome.INCONCLUSIVE.value
     # )
-    FirebaseHelperClient.post_recent_step_count_by_exectuion_summary(
+    FirebaseHelperClient.post_recent_step_count_by_execution_summary(
         execution_outcome_summary=ExecutionOutcome.SUCCESS.value
     )
     # FirebaseHelperClient.get_executions_from_past_day_by_execution_summary(

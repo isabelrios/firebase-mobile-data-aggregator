@@ -307,7 +307,7 @@ class FirebaseHelper:
                                         results.append(len(steps['steps']))
         return sum(results)
 
-    def post_recent_step_count_by_exectuion_summary(self, execution_outcome_summary: str) -> dict:
+    def post_recent_step_count_by_execution_summary(self, execution_outcome_summary: str) -> dict:
         self.generate_JSON(payload=(self.get_recent_step_count_by_execution_summary(execution_outcome_summary)))
 
     def print_test_results_by_execution_summary(self, execution_outcome_summary: str) -> None:

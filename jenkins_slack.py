@@ -51,7 +51,7 @@ def build_payload_content_isa(dataset: dict) -> list:
             if key != "testName":
                 dictionary[key] = round(float(dictionary[key]),4)
 
-    new_data = [{k: v for k, v in d.items() if v != '0.0'} for d in dataset]
+    new_data = [{k: v for k, v in d.items() if v != 0.0} for d in dataset]
     first_string = new_data[1]
     slack_payload = []
 

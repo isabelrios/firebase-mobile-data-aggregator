@@ -45,6 +45,12 @@ def build_payload_header() -> str:
                 }]
 
 def build_payload_content_isa(dataset: dict) -> list:
+    # Print only 4 decimals
+    for dictionary in dataset:
+        for key, value in dictionary.items():
+            if key != "testName":
+                dictionary[key] = round(float(dictionary[key]),4)
+
     new_data = [{k: v for k, v in d.items() if v != '0.0'} for d in dataset]
     first_string = new_data[1]
     slack_payload = []
@@ -68,7 +74,6 @@ def build_payload_content_isa(dataset: dict) -> list:
                         }
                     ]
             }
-        print("Before update", slack_payload)
         slack_payload.append(each_test_data)
 
     return slack_payload

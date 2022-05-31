@@ -44,7 +44,7 @@ def build_payload_header() -> str:
                     }
                 }]
 
-def build_payload_content_isa(dataset: dict) -> list:
+def build_payload_content(dataset: dict) -> list:
     # Print only 4 decimals
     for dictionary in dataset:
         for key, value in dictionary.items():
@@ -79,19 +79,35 @@ def build_payload_content_isa(dataset: dict) -> list:
 
 def build_payload_footer():
     return [
-                    {
-                        "type": "context",
-                        "elements": [
-                            {
-                                "type": "mrkdwn",
-                                "text": ":testops-notify: created by [<{}|{}>]"
-                                .format(
-                                    "https://mana.mozilla.org/wiki/x/P_zNBw",
-                                    "Mobile Test Engineering")
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": ":testops-notify: created by [<{}|{}>]"
+                            .format(
+                                "https://mana.mozilla.org/wiki/x/P_zNBw",
+                                "Mobile Test Engineering")
                             }
                         ]
-                    }
-                ]
+                }
+            ]
+
+def build_payload_link_to_content():
+    return [
+                {
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": ":mag: All data available in this <{}|{}>"
+                            .format(
+                                "https://docs.google.com/spreadsheets/d/1BqsYNhV1eQQR5e76VmolPsKwsXN7RbG58Slc4JeAE7k/edit?usp=sharing",
+                                "link")
+                        }
+                    ]
+                }
+    ]
 
 def main():
     args = parse_args(sys.argv[1:])
@@ -101,11 +117,12 @@ def main():
         with open(args.input) as data_file:
             dataset = json.load(data_file)
             header = build_payload_header()
-            content = build_payload_content_isa(dataset)
+            content = build_payload_content(dataset)
+            content_link = build_payload_link_to_content()
             footer = build_payload_footer()
             divider = [{"type": "divider"}]
 
-        data = {'blocks': header + divider + content + divider + footer}
+        data = {'blocks': header + divider + content + divider + content_link + footer}
         post_to_slack(data)
 
     except FileNotFoundError as e:

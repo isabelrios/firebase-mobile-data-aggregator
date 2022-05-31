@@ -40,7 +40,7 @@ def build_payload_header() -> str:
                     "type": "header",
                     "text": {
                         "type": "plain_text",
-                        "text": "Test Test"
+                        "text": ":firefox-browser: iOS Performance Tests"
                     }
                 }]
 
@@ -63,7 +63,6 @@ def build_payload_content_isa(dataset: dict) -> list:
         string4 = string3.replace(":", "=")
         string5 = string4.replace("TabsPerformanceTest/", "*")
         string6 = string5.replace(",", "\n")
-        string7 = string6.replace("Clock Monotonic Time", "ClockMonotonicTime")
 
         each_test_data = {
                     "type": "section",
@@ -78,6 +77,22 @@ def build_payload_content_isa(dataset: dict) -> list:
 
     return slack_payload
 
+def build_payload_footer():
+    return [
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "mrkdwn",
+                                "text": ":testops-notify: created by [<{}|{}>]"
+                                .format(
+                                    "https://mana.mozilla.org/wiki/x/P_zNBw",
+                                    "Mobile Test Engineering")
+                            }
+                        ]
+                    }
+                ]
+
 def main():
     args = parse_args(sys.argv[1:])
     header = build_payload_header()
@@ -87,8 +102,10 @@ def main():
             dataset = json.load(data_file)
             header = build_payload_header()
             content = build_payload_content_isa(dataset)
+            footer = build_payload_footer()
+            divider = [{"type": "divider"}]
 
-        data = {'blocks': header + content}
+        data = {'blocks': header + divider + content + divider + footer}
         post_to_slack(data)
 
     except FileNotFoundError as e:

@@ -16,6 +16,8 @@ import sys
 
 import requests
 
+from datetime import date
+
 
 def parse_args(cmdln_args):
     parser = argparse.ArgumentParser(
@@ -40,9 +42,25 @@ def build_payload_header() -> str:
                     "type": "header",
                     "text": {
                         "type": "plain_text",
-                        "text": ":firefox-browser: iOS Performance Tests"
+                        "text": ":firefox-browser: iOS Performance Tests <{}>"
+                        .format(date.today())
                     }
                 }]
+
+def build_payload_app_information():
+    # Show commit and date
+    return [
+            {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "plain_text",
+                    "text": ":github: Commit: <{}>"
+                    .format(os.environ['GIT_COMMIT']),
+                }
+            ]
+        }
+    ]
 
 def build_payload_content(dataset: dict) -> list:
     # Print only 4 decimals
@@ -96,33 +114,35 @@ def build_payload_footer():
 def build_payload_link_to_content():
     return [
                 {
-                    "type": "context",
-                    "elements": [
-                        {
-                            "type": "mrkdwn",
-                            "text": ":mag: All data available in this <{}|{}>"
-                            .format(
-                                "https://docs.google.com/spreadsheets/d/1BqsYNhV1eQQR5e76VmolPsKwsXN7RbG58Slc4JeAE7k/edit?usp=sharing",
-                                "link")
-                        }
-                    ]
+                "type": "actions",
+                "elements": [
+                    {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "text": ":mag: Check all trending data"
+                    },
+                    "value": "click_me_123",
+                    "action_id": "https://docs.google.com/spreadsheets/d/1BqsYNhV1eQQR5e76VmolPsKwsXN7RbG58Slc4JeAE7k/edit?usp=sharing"
                 }
+            ]
+        }
     ]
 
 def main():
     args = parse_args(sys.argv[1:])
-    header = build_payload_header()
     
     try:
         with open(args.input) as data_file:
             dataset = json.load(data_file)
             header = build_payload_header()
+            app_info = build_payload_app_information()
             content = build_payload_content(dataset)
             content_link = build_payload_link_to_content()
             footer = build_payload_footer()
             divider = [{"type": "divider"}]
 
-        data = {'blocks': header + divider + content + divider + content_link + footer}
+        data = {'blocks': header + app_info + divider + content + divider + content_link + footer}
         post_to_slack(data)
 
     except FileNotFoundError as e:

@@ -123,7 +123,7 @@ def build_payload_link_to_content():
                         "text": ":mag: Check all trending data"
                     },
                     "value": "click_me_123",
-                    "action_id": "https://docs.google.com/spreadsheets/d/1BqsYNhV1eQQR5e76VmolPsKwsXN7RbG58Slc4JeAE7k/edit?usp=sharing"
+                    "url": "https://docs.google.com/spreadsheets/d/1BqsYNhV1eQQR5e76VmolPsKwsXN7RbG58Slc4JeAE7k/edit#gid=0"
                 }
             ]
         }
